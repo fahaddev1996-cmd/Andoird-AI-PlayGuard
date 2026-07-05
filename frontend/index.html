@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlayGuard AI — Autonomous Play Store Agent</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0f172a;--navy2:#1e293b;--navy3:#334155;
+  --mint:#00d4aa;--mint2:#00b894;--mintdim:rgba(0,212,170,.12);
+  --white:#f8fafc;--muted:#94a3b8;
+  --red:#ef4444;--amber:#f59e0b;--green:#10b981;--blue:#3b82f6;
+  --border:rgba(255,255,255,.08);--card:rgba(30,41,59,.6);
+  --r:14px;
+}
+body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--white);min-height:100vh;line-height:1.6}
+
+/* HEADER */
+header{padding:18px 32px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);background:rgba(15,23,42,.9);
+  position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.logo{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:800}
+.logo-icon{width:38px;height:38px;background:var(--mint);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:20px}
+.logo span{color:var(--mint)}
+.tag{font-size:11px;font-weight:600;padding:4px 10px;background:var(--mintdim);
+  color:var(--mint);border:1px solid var(--mint);border-radius:100px;letter-spacing:.5px}
+
+/* HERO */
+.hero{max-width:860px;margin:60px auto 0;padding:0 24px;text-align:center}
+.kicker{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;
+  letter-spacing:1px;text-transform:uppercase;color:var(--mint);
+  background:var(--mintdim);border:1px solid rgba(0,212,170,.3);
+  padding:5px 14px;border-radius:100px;margin-bottom:20px}
+h1{font-size:clamp(32px,5vw,58px);font-weight:800;line-height:1.1;
+  letter-spacing:-1.5px;margin-bottom:16px}
+h1 .accent{color:var(--mint)}
+.hero-sub{font-size:17px;color:var(--muted);max-width:520px;margin:0 auto 48px}
+
+/* UPLOAD */
+.upload-wrap{max-width:620px;margin:0 auto 48px;padding:0 24px}
+.drop{border:2px dashed rgba(0,212,170,.35);border-radius:20px;padding:48px 32px;
+  text-align:center;cursor:pointer;transition:all .2s;
+  background:rgba(0,212,170,.03);position:relative}
+.drop:hover,.drop.over{border-color:var(--mint);background:var(--mintdim);transform:translateY(-2px)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.drop-icon{width:64px;height:64px;margin:0 auto 16px;background:var(--mintdim);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px}
+.drop-title{font-size:18px;font-weight:700;margin-bottom:6px}
+.drop-sub{font-size:13px;color:var(--muted);margin-bottom:14px}
+.badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.badge{font-size:11px;font-weight:600;padding:3px 10px;background:var(--navy3);border-radius:100px;color:var(--muted)}
+
+/* Extra options */
+.options-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:14px}
+.opt-input{width:100%;background:var(--navy2);border:1px solid var(--border);border-radius:10px;
+  padding:10px 14px;color:var(--white);font-size:13px;font-family:inherit;outline:none}
+.opt-input:focus{border-color:var(--mint)}
+.check-row{display:flex;gap:16px;flex-wrap:wrap}
+.check-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer}
+.check-item input{accent-color:var(--mint)}
+
+.file-sel{display:none;align-items:center;gap:12px;background:var(--card);
+  border:1px solid var(--border);border-radius:12px;padding:12px 18px;margin-top:12px}
+.file-sel.on{display:flex}
+.file-name{font-weight:600;font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-size{font-size:11px;color:var(--muted)}
+.rm{cursor:pointer;color:var(--muted);font-size:16px;padding:4px}
+.rm:hover{color:var(--red)}
+
+.btn{width:100%;padding:15px;margin-top:14px;background:var(--mint);color:var(--navy);
+  font-size:15px;font-weight:700;border:none;border-radius:12px;cursor:pointer;
+  transition:all .2s;display:none}
+.btn:hover{background:var(--mint2);transform:translateY(-1px)}
+.btn.on{display:block}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* LOADING */
+.loading{display:none;text-align:center;padding:40px 24px;max-width:480px;margin:0 auto}
+.loading.on{display:block}
+.spin{width:52px;height:52px;margin:0 auto 20px;border:3px solid var(--navy3);
+  border-top-color:var(--mint);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.agent-steps{list-style:none;max-width:320px;margin:16px auto 0;text-align:left}
+.agent-steps li{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);padding:5px 0;transition:color .3s}
+.agent-steps li.active{color:var(--mint)}
+.agent-steps li.done{color:var(--green)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+
+/* RESULTS */
+#results{display:none;max-width:920px;margin:0 auto;padding:0 24px 64px}
+#results.on{display:block}
+
+/* Score */
+.score-hero{background:var(--card);border:1px solid var(--border);border-radius:24px;
+  padding:36px;margin-bottom:20px;display:grid;grid-template-columns:160px 1fr;gap:36px;
+  align-items:center;backdrop-filter:blur(12px)}
+.ring-wrap{position:relative;width:150px;height:150px}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--navy3);stroke-width:12}
+.ring-fg{fill:none;stroke-width:12;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1)}
+.score-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score-n{font-size:38px;font-weight:800;line-height:1}
+.score-l{font-size:11px;color:var(--muted);margin-top:2px}
+.verdict-txt{font-size:26px;font-weight:800;margin-bottom:6px}
+.verdict-sub{color:var(--muted);font-size:14px;margin-bottom:16px}
+.pills{display:flex;gap:10px;flex-wrap:wrap}
+.pill{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:100px;font-size:12px;font-weight:600;background:var(--navy3)}
+
+/* Agent trace */
+.trace-card{background:var(--card);border:1px solid rgba(0,212,170,.2);border-radius:var(--r);
+  padding:24px;margin-bottom:20px;backdrop-filter:blur(12px)}
+.trace-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.trace-chip{font-size:11px;font-weight:700;padding:3px 10px;background:var(--mint);color:var(--navy);border-radius:100px}
+.trace-title{font-size:17px;font-weight:700}
+.step-card{background:rgba(0,0,0,.2);border:1px solid var(--border);border-radius:10px;
+  padding:14px;margin:8px 0}
+.step-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.step-num{width:24px;height:24px;border-radius:6px;background:var(--mintdim);color:var(--mint);
+  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-action{font-size:13px;font-weight:600;color:var(--mint)}
+.step-thought{font-size:12px;color:var(--muted);font-style:italic;margin-bottom:6px}
+.step-obs{font-size:11px;color:#64748b;background:rgba(0,0,0,.3);border-radius:6px;
+  padding:8px;margin-top:6px;max-height:80px;overflow:hidden;font-family:monospace;white-space:pre-wrap}
+
+/* Info card */
+.info-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:22px;margin-bottom:20px;backdrop-filter:blur(12px)}
+.card-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.8px;margin-bottom:14px}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+.info-key{font-size:11px;color:var(--muted);margin-bottom:2px}
+.info-val{font-size:13px;font-weight:600}
+
+/* Fix plan */
+.fix-section{margin-bottom:8px}
+.fix-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.fix-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.fix-item:last-child{border-bottom:none}
+.fix-sev{font-size:10px;font-weight:700;padding:2px 7px;border-radius:100px;white-space:nowrap;height:fit-content;margin-top:2px}
+.fix-action{font-size:13px}
+.fix-effort{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* Checklist */
+.check-list{list-style:none}
+.check-list li{padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;color:#94a3b8}
+.check-list li:last-child{border-bottom:none}
+
+/* Findings */
+.finding{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:18px;margin-bottom:10px;border-left:4px solid transparent;
+  transition:transform .15s;backdrop-filter:blur(12px)}
+.finding:hover{transform:translateX(3px)}
+.finding-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:6px}
+.sev{font-size:10px;font-weight:700;padding:3px 8px;border-radius:100px;white-space:nowrap;margin-top:2px}
+.finding-title{font-size:14px;font-weight:600}
+.finding-cat{font-size:11px;color:var(--muted);margin-bottom:6px}
+.finding-desc{font-size:12px;color:#94a3b8;white-space:pre-line}
+.finding-fix{margin-top:10px;padding:9px 12px;background:rgba(16,185,129,.08);
+  border:1px solid rgba(16,185,129,.2);border-radius:8px;font-size:12px;color:#6ee7b7}
+
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.fbtn{padding:5px 13px;border-radius:100px;border:1px solid var(--border);
+  background:transparent;color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.fbtn:hover,.fbtn.active{background:var(--mintdim);border-color:var(--mint);color:var(--mint)}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;right:24px;background:#1e293b;border:1px solid var(--red);
+  border-radius:12px;padding:12px 18px;font-size:13px;max-width:340px;
+  transform:translateY(80px);opacity:0;transition:all .3s;z-index:999}
+.toast.show{transform:translateY(0);opacity:1}
+
+@media(max-width:600px){
+  .score-hero{grid-template-columns:1fr;text-align:center}
+  .ring-wrap{margin:0 auto}
+  .pills{justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="logo-icon">🛡️</div>Play<span>Guard</span> AI</div>
+  <div class="tag">⚡ Autonomous ReAct Agent</div>
+</header>
+
+<section class="hero">
+  <div class="kicker">🎓 Agentic AI Bootcamp — Capstone</div>
+  <h1>Your autonomous<br><span class="accent">Play Store agent</span></h1>
+  <p class="hero-sub">Upload your APK/AAB. The agent reasons, calls tools, and builds your complete submission readiness report — autonomously.</p>
+</section>
+
+<div class="upload-wrap">
+  <div class="drop" id="drop">
+    <input type="file" id="fileInput" accept=".apk,.aab">
+    <div class="drop-icon">📦</div>
+    <div class="drop-title">Drop APK or AAB here</div>
+    <div class="drop-sub">or click to browse</div>
+    <div class="badges">
+      <span class="badge">.apk</span>
+      <span class="badge">.aab</span>
+      <span class="badge">max 200MB</span>
+    </div>
+  </div>
+
+  <div class="file-sel" id="fileSel">
+    <span style="font-size:24px">📱</span>
+    <div style="flex:1;min-width:0">
+      <div class="file-name" id="fileName">—</div>
+      <div class="file-size" id="fileSize">—</div>
+    </div>
+    <span class="rm" id="rmFile">✕</span>
+  </div>
+
+  <div class="options-grid" id="opts" style="display:none">
+    <input class="opt-input" id="features" placeholder="App features (e.g. events discovery, ticket buying, chat) — helps the agent generate a better store listing">
+    <div class="check-row">
+      <label class="check-item"><input type="checkbox" id="hasAds"> Shows Ads</label>
+      <label class="check-item"><input type="checkbox" id="hasPayments" checked> Has Payments/IAP</label>
+      <label class="check-item"><input type="checkbox" id="hasAccount" checked> Has User Accounts</label>
+    </div>
+  </div>
+
+  <button class="btn" id="btnRun" onclick="startAgent()">🤖 Run Agent</button>
+
+  <div class="loading" id="loading">
+    <div class="spin"></div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:6px">Agent is working…</div>
+    <div style="font-size:12px;color:var(--muted)">Calling tools autonomously via MCP</div>
+    <ul class="agent-steps" id="agentSteps">
+      <li data-i="0"><span class="dot"></span>Scanning APK via MCP tool…</li>
+      <li data-i="1"><span class="dot"></span>Analyzing permissions…</li>
+      <li data-i="2"><span class="dot"></span>Building fix plan…</li>
+      <li data-i="3"><span class="dot"></span>Generating Data Safety checklist…</li>
+      <li data-i="4"><span class="dot"></span>Compiling final report…</li>
+    </ul>
+  </div>
+</div>
+
+<div id="results">
+
+  <!-- Score -->
+  <div class="score-hero">
+    <div class="ring-wrap">
+      <svg viewBox="0 0 150 150" width="150" height="150">
+        <circle class="ring-bg" cx="75" cy="75" r="62"/>
+        <circle class="ring-fg" id="ringFg" cx="75" cy="75" r="62" stroke-dasharray="390" stroke-dashoffset="390"/>
+      </svg>
+      <div class="score-center">
+        <div class="score-n" id="scoreN">—</div>
+        <div class="score-l">/ 100</div>
+      </div>
+    </div>
+    <div>
+      <div class="verdict-txt" id="verdictTxt">—</div>
+      <div class="verdict-sub" id="verdictSub">—</div>
+      <div class="pills" id="pillsRow"></div>
+    </div>
+  </div>
+
+  <!-- Agent Trace -->
+  <div class="trace-card">
+    <div class="trace-header">
+      <span class="trace-chip">AGENT TRACE</span>
+      <span class="trace-title">ReAct Loop — Tool Calls</span>
+    </div>
+    <div id="traceSteps"></div>
+  </div>
+
+  <!-- App Info -->
+  <div class="info-card">
+    <div class="card-title">App Info</div>
+    <div class="info-grid" id="appGrid"></div>
+  </div>
+
+  <!-- Fix Plan -->
+  <div class="info-card" id="fixCard" style="display:none">
+    <div class="card-title">🔧 Prioritized Fix Plan</div>
+    <div id="fixPlan"></div>
+  </div>
+
+  <!-- Data Safety Checklist -->
+  <div class="info-card" id="checkCard" style="display:none">
+    <div class="card-title">☑️ Data Safety Checklist</div>
+    <ul class="check-list" id="checkList"></ul>
+  </div>
+
+  <!-- Store Listing Draft -->
+  <div class="info-card" id="listingCard" style="display:none">
+    <div class="card-title">📝 Store Listing Draft (Agent-Generated)</div>
+    <div id="listingContent"></div>
+  </div>
+
+  <!-- Findings -->
+  <div>
+    <div style="font-size:18px;font-weight:700;margin-bottom:12px">Policy Findings</div>
+    <div class="filter-row" id="filterRow"></div>
+    <div id="findingsList"></div>
+  </div>
+
+  <div style="text-align:center;margin-top:36px">
+    <button onclick="resetAll()" style="padding:11px 28px;background:transparent;border:2px solid var(--border);
+      border-radius:12px;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;
+      transition:all .2s" onmouseover="this.style.borderColor='var(--mint)';this.style.color='var(--mint)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+      ↺ Analyze Another App
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = window.location.origin;
+let selectedFile = null;
+
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('fileInput');
+
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if(e.target.files[0]) handleFile(e.target.files[0]); });
+document.getElementById('rmFile').addEventListener('click', resetFile);
+
+function handleFile(f) {
+  const ext = f.name.split('.').pop().toLowerCase();
+  if(!['apk','aab'].includes(ext)) { showToast('❌ Only .apk or .aab files'); return; }
+  selectedFile = f;
+  document.getElementById('fileName').textContent = f.name;
+  document.getElementById('fileSize').textContent = (f.size/1024/1024).toFixed(2)+' MB';
+  document.getElementById('fileSel').classList.add('on');
+  document.getElementById('opts').style.display = 'grid';
+  document.getElementById('btnRun').classList.add('on');
+}
+function resetFile() {
+  selectedFile = null; fileInput.value = '';
+  document.getElementById('fileSel').classList.remove('on');
+  document.getElementById('opts').style.display = 'none';
+  document.getElementById('btnRun').classList.remove('on');
+}
+
+async function startAgent() {
+  if(!selectedFile) return;
+  document.getElementById('loading').classList.add('on');
+  document.getElementById('btnRun').disabled = true;
+  document.getElementById('results').classList.remove('on');
+
+  // Animate loading steps
+  const steps = document.querySelectorAll('#agentSteps li');
+  let idx = 0;
+  const t = setInterval(() => {
+    if(idx > 0) { steps[idx-1].classList.remove('active'); steps[idx-1].classList.add('done'); }
+    if(idx < steps.length) { steps[idx].classList.add('active'); idx++; }
+    else clearInterval(t);
+  }, 2200);
+
+  try {
+    const form = new FormData();
+    form.append('file', selectedFile);
+    form.append('app_features', document.getElementById('features').value);
+    form.append('has_ads', document.getElementById('hasAds').checked);
+    form.append('has_payments', document.getElementById('hasPayments').checked);
+    form.append('has_account', document.getElementById('hasAccount').checked);
+
+    const resp = await fetch(`${API}/api/analyze`, { method:'POST', body:form });
+    clearInterval(t);
+    steps.forEach(s => { s.classList.remove('active'); s.classList.add('done'); });
+
+    if(!resp.ok) { const e = await resp.json(); throw new Error(e.detail||'Analysis failed'); }
+    const data = await resp.json();
+    renderResults(data);
+  } catch(err) {
+    showToast('❌ '+err.message);
+    document.getElementById('loading').classList.remove('on');
+    document.getElementById('btnRun').disabled = false;
+  }
+}
+
+function renderResults(data) {
+  document.getElementById('loading').classList.remove('on');
+
+  // Score ring
+  const score = data.score || 0;
+  const rc = score>=85?'#10b981':score>=65?'#f59e0b':score>=40?'#f97316':'#ef4444';
+  const ring = document.getElementById('ringFg');
+  ring.style.stroke = rc;
+  setTimeout(() => { ring.style.strokeDashoffset = 390 - (score/100)*390; }, 100);
+  document.getElementById('scoreN').textContent = score;
+  document.getElementById('scoreN').style.color = rc;
+  document.getElementById('verdictTxt').textContent = data.verdict || '—';
+  document.getElementById('verdictTxt').style.color = rc;
+  document.getElementById('verdictSub').textContent = `${data.agent_steps} agent steps · ${data.counts?.critical||0} critical, ${data.counts?.high||0} high issues`;
+
+  const c = data.counts||{};
+  document.getElementById('pillsRow').innerHTML = [
+    {l:'🚨 Critical',v:c.critical,c:'#ef4444'},{l:'🔴 High',v:c.high,c:'#f59e0b'},
+    {l:'✅ Passed',v:c.passed,c:'#10b981'},{l:'🔄 Steps',v:data.agent_steps,c:'#3b82f6'},
+  ].map(p=>`<div class="pill" style="color:${p.c}"><strong>${p.v||0}</strong><span style="color:var(--muted)">${p.l}</span></div>`).join('');
+
+  // Agent trace
+  const trace = data.agent_trace||[];
+  document.getElementById('traceSteps').innerHTML = trace.map(s => {
+    const obsText = s.observation ? JSON.stringify(s.observation,null,2).slice(0,200)+'…' : '';
+    return `<div class="step-card">
+      <div class="step-header">
+        <div class="step-num">${s.step}</div>
+        <div class="step-action">${s.action==='complete'?'✅ complete':('🔧 '+s.action)}</div>
+      </div>
+      ${s.thought?`<div class="step-thought">"${s.thought}"</div>`:''}
+      ${obsText?`<div class="step-obs">${obsText}</div>`:''}
+    </div>`;
+  }).join('');
+
+  // App info
+  const ai = data.app_info||{};
+  const fields=[
+    {k:'Package',v:ai.package_name||'Unknown'},{k:'Version',v:ai.version_name||'?'},
+    {k:'Target SDK',v:ai.target_sdk||'?'},{k:'Min SDK',v:ai.min_sdk||'?'},
+    {k:'Format',v:ai.format||'?'},{k:'File',v:ai.file_size_mb+'MB'},
+    {k:'Signed',v:ai.is_signed?'✅ Yes':'❌ No'},{k:'Permissions',v:(ai.total_permissions||0)+' declared'},
+  ];
+  document.getElementById('appGrid').innerHTML = fields.map(f=>`<div><div class="info-key">${f.k}</div><div class="info-val">${f.v}</div></div>`).join('');
+
+  // Fix plan
+  const fp = data.fix_plan;
+  if(fp) {
+    document.getElementById('fixCard').style.display='block';
+    const sev={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#fbbf24',LOW:'#3b82f6'};
+    let html='';
+    if(fp.before_build?.length){
+      html+=`<div class="fix-section"><div class="fix-label" style="color:#ef4444">🔴 Fix Before Build (${fp.before_build.length})</div>`;
+      html+=fp.before_build.map(f=>`<div class="fix-item"><span class="fix-sev" style="background:${sev[f.severity]||'#64748b'}22;color:${sev[f.severity]||'#94a3b8'}">${f.severity}</span><div><div class="fix-action">${f.action}</div><div class="fix-effort">⏱ ${f.effort}</div></div></div>`).join('');
+      html+='</div>';
+    }
+    if(fp.before_submit?.length){
+      html+=`<div class="fix-section" style="margin-top:14px"><div class="fix-label" style="color:#f59e0b">🟡 Fix Before Submit (${fp.before_submit.length})</div>`;
+      html+=fp.before_submit.map(f=>`<div class="fix-item"><span class="fix-sev" style="background:#f59e0b22;color:#f59e0b">${f.severity}</span><div><div class="fix-action">${f.action}</div><div class="fix-effort">⏱ ${f.effort}</div></div></div>`).join('');
+      html+='</div>';
+    }
+    if(fp.submission_ready) html+='<div style="color:#10b981;font-size:14px;margin-top:10px">✅ No blocking issues — ready to submit!</div>';
+    document.getElementById('fixPlan').innerHTML = html;
+  }
+
+  // Data Safety checklist
+  const cl = data.data_safety_checklist;
+  if(cl?.checklist?.length){
+    document.getElementById('checkCard').style.display='block';
+    document.getElementById('checkList').innerHTML = cl.checklist.map(i=>`<li>${i}</li>`).join('');
+  }
+
+  // Store listing
+  const sl = data.store_listing_draft;
+  if(sl){
+    document.getElementById('listingCard').style.display='block';
+    document.getElementById('listingContent').innerHTML = `
+      <div style="margin-bottom:12px"><div class="info-key">Short Description (${sl.short_description_length} chars)</div>
+      <div style="font-size:13px;margin-top:4px;color:var(--white)">${sl.short_description}</div></div>
+      <div><div class="info-key">Long Description</div>
+      <div style="font-size:12px;margin-top:4px;color:#94a3b8;white-space:pre-line">${sl.long_description}</div></div>
+      ${sl.policy_warnings?.length?`<div style="margin-top:10px;color:#ef4444;font-size:12px">⚠️ Warnings: ${sl.policy_warnings.join(', ')}</div>`:''}
+    `;
+  }
+
+  // Findings
+  renderFindings(data.findings||[], 'All');
+
+  document.getElementById('results').classList.add('on');
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function renderFindings(findings, filter) {
+  const order = ['CRITICAL','HIGH','MEDIUM','LOW','INFO','PASS'];
+  const sorted = [...findings].sort((a,b)=>order.indexOf(a.severity)-order.indexOf(b.severity));
+  const sevs = ['All',...new Set(sorted.map(f=>f.severity))];
+  document.getElementById('filterRow').innerHTML = sevs.map(s=>
+    `<button class="fbtn ${s===filter?'active':''}" onclick="renderFindings(window._f,'${s}')">${s}</button>`
+  ).join('');
+  window._f = findings;
+  const list = filter==='All'?sorted:sorted.filter(f=>f.severity===filter);
+  const sevC={CRITICAL:'#ef4444',HIGH:'#f59e0b',MEDIUM:'#fbbf24',LOW:'#3b82f6',INFO:'#64748b',PASS:'#10b981'};
+  document.getElementById('findingsList').innerHTML = list.map(f=>`
+    <div class="finding" style="border-left-color:${sevC[f.severity]||'#94a3b8'}">
+      <div class="finding-row">
+        <span class="sev" style="background:${sevC[f.severity]||'#94a3b8'}22;color:${sevC[f.severity]||'#94a3b8'}">${f.severity}</span>
+        <span class="finding-title">${f.title}</span>
+      </div>
+      <div class="finding-cat">📂 ${f.category}</div>
+      <div class="finding-desc">${f.description}</div>
+      ${f.fix?`<div class="finding-fix">💡 <strong>Fix:</strong> ${f.fix}</div>`:''}
+    </div>
+  `).join('') || '<div style="color:var(--muted);text-align:center;padding:24px">No findings in this category.</div>';
+}
+
+function resetAll() {
+  resetFile();
+  document.getElementById('results').classList.remove('on');
+  document.getElementById('btnRun').disabled = false;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),4000);
+}
+</script>
+</body>
+</html>
